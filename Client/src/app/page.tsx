@@ -50,19 +50,28 @@ export default function Home() {
     setError("");
 
     try {
-      const response = await fetch("/api/fragmentData", {
+      // Send encrypted data to the server
+      const response = await fetch("/api/uploadEncryptedData", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data, fragmentSize, encryptionKey }),
+        body: JSON.stringify({
+          encryptedData: data,
+          encryptionKey,
+          randomness: "random-value-for-commitment", // Replace or generate randomness dynamically
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fragment data");
+        throw new Error(errorData.message || "Failed to upload data");
       }
 
       const result = await response.json();
-      setFragments(result.fragments);
+      console.log("Data uploaded successfully:", result);
+
+      // Process response fragments or other data if necessary
+      setFragments(result.fragments || []);
+      alert("Data uploaded and processed successfully!");
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
