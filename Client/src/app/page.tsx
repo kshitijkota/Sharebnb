@@ -12,7 +12,7 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Shield, Scissors, Key } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { splitAndEncryptData, Fragment } from "../../utils/dataProcessor";
+import { splitAndEncryptData, Fragment } from "@/lib/dataProcessor";
 
 export default function Home() {
   const [data, setData] = useState<string>("");
