@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "circom": "^0.5.46",
     "ethers": "^6.13.5",
     "next": "15.1.4",
     "react": "^19.0.0",
