@@ -53,22 +53,16 @@ export default function Home() {
       }
 
       // Split and encrypt the data into fragments
-      const encryptedFragments = splitAndEncryptData(
-        data,
-        fragmentSize,
-        encryptionKey
-      );
+      const encryptedFragments = splitAndEncryptData(data, fragmentSize, encryptionKey);
       setFragments(encryptedFragments);
 
-      // Commitments can be derived from encrypted data or fragments
-      const commitment = encryptedFragments
-        .map((fragment) => fragment.encryptedData)
-        .join("");
+      // Define the userId (this can be dynamic if tied to authentication)
+      const userId = "user123";
 
       const response = await fetch("http://localhost:3000/api/storeData", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fragments: encryptedFragments, commitment }),
+        body: JSON.stringify({ userId, encryptedData: encryptedFragments }),
       });
 
       if (!response.ok) {
@@ -84,6 +78,7 @@ export default function Home() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 py-8 px-4 sm:px-6 lg:px-8">
