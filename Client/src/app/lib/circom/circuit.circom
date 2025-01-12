@@ -1,17 +1,43 @@
 pragma circom 2.0.0;
 
+template IsPositive() {
+    signal input in;
+    signal output out;
+
+    // We'll use a binary decomposition approach
+    // Assuming input is 32 bits maximum
+    signal bits[32];
+    var lc = 0;
+
+    // Convert to binary
+    for (var i = 0; i < 32; i++) {
+        bits[i] <-- (in >> i) & 1;
+        // Constraint bits to be 0 or 1
+        bits[i] * (bits[i] - 1) === 0;
+        lc = lc + bits[i] * (1 << i);
+    }
+
+    // Ensure the binary decomposition matches the input
+    lc === in;
+
+    // If any bit is 1, the number is positive
+    var sum = 0;
+    for (var i = 0; i < 32; i++) {
+        sum = sum + bits[i];
+    }
+
+    // Output 1 if sum > 0 (meaning at least one bit is 1)
+    out <-- (sum > 0) ? 1 : 0;
+    out * (out - 1) === 0; // Constraint output to be 0 or 1
+}
+
 template VerifyUserId() {
-    signal input userId;      // The userId to verify
-    signal output valid;      // The output signal, 1 if valid, 0 otherwise
+    signal input userId;
+    signal output valid;
 
-    // Temporary signal to hold the difference from zero
-    signal diff;
-
-    // The valid signal will be 1 if userId > 0
-    diff <== userId;    // diff will hold userId value
-
-    // valid should be 1 if userId > 0, otherwise 0
-    valid <== (diff > 0);  // This will be 1 if diff > 0, otherwise 0
+    component isPos = IsPositive();
+    isPos.in <== userId;
+    valid <== isPos.out;
 }
 
 component main = VerifyUserId();
