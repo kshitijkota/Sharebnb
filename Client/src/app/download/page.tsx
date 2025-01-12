@@ -20,8 +20,8 @@ export default function RetrieveData() {
             // Generate the proof using the correct paths to the compiled files
             const { proof, publicSignals } = await groth16.fullProve(
                 input,
-                "/zkp/circuit.wasm",  // Note: files are served from /public
-                "/zkp/circuit_final.zkey"
+                "/circuits/circuit.wasm",  // Note: files are served from /public
+                "/circuits/circuit_final.zkey"
             );
 
             console.log("Proof generated successfully");

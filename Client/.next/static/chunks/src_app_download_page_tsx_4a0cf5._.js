@@ -11,6 +11,7 @@ __turbopack_esm__({
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$build$2f$browser$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/snarkjs/build/browser.esm.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$buffer$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/next/dist/compiled/buffer/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_import__("[project]/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
 ;
 var _s = __turbopack_refresh__.signature();
@@ -24,41 +25,52 @@ function RetrieveData() {
     const [encryptionKey, setEncryptionKey] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("");
     const [retrievedData, setRetrievedData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     // Function to generate a ZKP proof
     const generateProof = async (userId)=>{
         try {
-            const circuitInput = "../lib/circom/circuit.circom"; // Example circuit input
-            const wasmFilePath = "../lib/circom/circuit_js/circuit.wasm"; // Update with actual path
-            const zkeyFilePath = "../lib/circom/circuit.circom"; // Update with actual path
-            // Generate ZKP proof using Groth16
-            const { proof, publicSignals } = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$build$2f$browser$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["groth16"].fullProve(circuitInput, wasmFilePath, zkeyFilePath);
-            console.log("Proof generated:", proof);
-            console.log("Public signals:", publicSignals);
+            // Create the circuit input
+            const input = {
+                userId: parseInt(userId)
+            };
+            // Generate the proof using the correct paths to the compiled files
+            const { proof, publicSignals } = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$build$2f$browser$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["groth16"].fullProve(input, "/circuits/circuit.wasm", "/circuits/circuit_final.zkey");
+            console.log("Proof generated successfully");
             return {
                 proof,
                 publicSignals
             };
         } catch (err) {
             console.error("Error generating proof:", err);
-            setError("Failed to generate proof.");
-            return null;
+            throw new Error("Failed to generate zero-knowledge proof");
         }
     };
-    // Function to decrypt data
+    // Function to verify the proof
+    const verifyProof = async (proof, publicSignals)=>{
+        try {
+            const response = await fetch("/zkp/verification_key.json");
+            const vKey = await response.json();
+            const isValid = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$build$2f$browser$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["groth16"].verify(vKey, publicSignals, proof);
+            return isValid;
+        } catch (err) {
+            console.error("Error verifying proof:", err);
+            throw new Error("Failed to verify zero-knowledge proof");
+        }
+    };
+    // Function to decrypt data using the encryption key
     const decryptData = (encryptedData, key)=>{
         try {
-            // Use the encryption key to decrypt the data (example)
-            const encryptedBytes = atob(encryptedData); // Decoding from Base64
+            // Assuming the data is base64 encoded
+            const encryptedBytes = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$buffer$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Buffer"].from(encryptedData, 'base64');
             let decrypted = "";
-            // Simple decryption using the key
+            // XOR decryption with key
             for(let i = 0; i < encryptedBytes.length; i++){
-                decrypted += String.fromCharCode(encryptedBytes.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+                decrypted += String.fromCharCode(encryptedBytes[i] ^ key.charCodeAt(i % key.length));
             }
             return decrypted;
         } catch (err) {
             console.error("Error decrypting data:", err);
-            setError("Failed to decrypt data. Ensure the encryption key is correct.");
-            return "";
+            throw new Error("Failed to decrypt data");
         }
     };
     // Handle form submission
@@ -66,168 +78,174 @@ function RetrieveData() {
         e.preventDefault();
         setError(null);
         setRetrievedData(null);
-        if (!userId || !encryptionKey) {
-            setError("Please enter both User ID and Encryption Key.");
-            return;
-        }
+        setIsLoading(true);
         try {
-            // Generate ZKP proof
+            if (!userId || !encryptionKey) {
+                throw new Error("Please enter both User ID and Encryption Key");
+            }
+            // Generate and verify the proof
             const zkpResult = await generateProof(userId);
-            if (!zkpResult) return;
+            if (!zkpResult) {
+                throw new Error("Failed to generate proof");
+            }
             const { proof, publicSignals } = zkpResult;
+            // Verify the proof locally
+            const isValid = await verifyProof(proof, publicSignals);
+            if (!isValid) {
+                throw new Error("Invalid proof");
+            }
             // Fetch data from the server
             const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].post("/api/fetchData", {
                 userId,
                 proof,
                 publicSignals
             });
-            if (response.status === 200) {
+            if (response.data.encryptedFragments) {
                 // Decrypt the data
                 const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
                 setRetrievedData(decryptedData);
             } else {
-                setError(response.data.message || "Failed to fetch data.");
+                throw new Error("No data received from server");
             }
         } catch (err) {
-            console.error("Error fetching data:", err);
-            setError("An error occurred while fetching or processing the data.");
+            setError(err.message || "An error occurred");
+        } finally{
+            setIsLoading(false);
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        style: {
-            padding: "20px"
-        },
+        className: "max-w-2xl mx-auto p-6",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
+                className: "text-2xl font-bold mb-6",
                 children: "Retrieve and Decrypt Data"
             }, void 0, false, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 94,
-                columnNumber: 9
+                lineNumber: 122,
+                columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
                 onSubmit: handleSubmit,
+                className: "space-y-4",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        style: {
-                            marginBottom: "10px"
-                        },
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
                                 htmlFor: "userId",
+                                className: "block mb-2",
                                 children: "User ID:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 97,
-                                columnNumber: 13
+                                lineNumber: 125,
+                                columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                 type: "text",
                                 id: "userId",
+                                className: "w-full p-2 border rounded",
                                 value: userId,
                                 onChange: (e)=>setUserId(e.target.value),
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 98,
-                                columnNumber: 13
+                                lineNumber: 128,
+                                columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 96,
-                        columnNumber: 13
+                        lineNumber: 124,
+                        columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        style: {
-                            marginBottom: "10px"
-                        },
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
                                 htmlFor: "encryptionKey",
+                                className: "block mb-2",
                                 children: "Encryption Key:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 107,
-                                columnNumber: 13
+                                lineNumber: 138,
+                                columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                 type: "password",
                                 id: "encryptionKey",
+                                className: "w-full p-2 border rounded",
                                 value: encryptionKey,
                                 onChange: (e)=>setEncryptionKey(e.target.value),
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 108,
-                                columnNumber: 13
+                                lineNumber: 141,
+                                columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 106,
-                        columnNumber: 13
+                        lineNumber: 137,
+                        columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                         type: "submit",
-                        children: "Fetch and Decrypt Data"
+                        className: "w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400",
+                        disabled: isLoading,
+                        children: isLoading ? "Processing..." : "Fetch and Decrypt Data"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 116,
-                        columnNumber: 13
+                        lineNumber: 150,
+                        columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 95,
-                columnNumber: 9
+                lineNumber: 123,
+                columnNumber: 13
             }, this),
-            error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                style: {
-                    color: "red"
-                },
+            error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "mt-4 p-4 bg-red-100 text-red-700 rounded",
                 children: [
                     "Error: ",
                     error
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 119,
-                columnNumber: 19
+                lineNumber: 160,
+                columnNumber: 17
             }, this),
             retrievedData && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                style: {
-                    marginTop: "20px"
-                },
+                className: "mt-6",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
+                        className: "text-xl font-semibold mb-2",
                         children: "Decrypted Data:"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 122,
-                        columnNumber: 13
+                        lineNumber: 167,
+                        columnNumber: 21
                     }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("pre", {
+                        className: "p-4 bg-gray-100 rounded overflow-x-auto",
                         children: retrievedData
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 123,
-                        columnNumber: 13
+                        lineNumber: 168,
+                        columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 121,
-                columnNumber: 13
+                lineNumber: 166,
+                columnNumber: 17
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/download/page.tsx",
-        lineNumber: 93,
+        lineNumber: 121,
         columnNumber: 9
     }, this);
 }
-_s(RetrieveData, "wdFm8Ffj3SK+mjxtfndbqa6Jp+E=");
+_s(RetrieveData, "uIfRZbHKtuFNja2I3rEso+bHdjo=");
 _c = RetrieveData;
 var _c;
 __turbopack_refresh__.register(_c, "RetrieveData");
