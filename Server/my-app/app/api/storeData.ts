@@ -1,36 +1,60 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-// import { ContractManager } from "../../lib/blockchain";
-// import { generateCommitment } from "../../lib/generateCommitment";
+
+// Temporary in-memory storage (use a database in production)
+const encryptedDataStore: Record<string, any[]> = {};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === "POST") {
-        const { encryptedData, encryptionKey, randomness } = req.body;
-        console.log(typeof(encryptedData))
-        if (!encryptedData || !encryptionKey || !randomness) {
-        return res.status(400).json({ message: "Missing required fields" });
+        const { userId, encryptedData } = req.body;
+
+        // Validate that both `userId` and `encryptedData` are provided
+        if (!userId || !encryptedData) {
+        return res.status(400).json({ message: "Missing required fields: userId or encryptedData" });
         }
 
-    //     try {
-    //     // Generate a commitment hash
-    //     const commitment = generateCommitment(encryptedData, randomness).toString();
+        try {
+        // Store data for the user
+        encryptedDataStore[userId] = encryptedData;
 
-    //     // Store the commitment on the blockchain
-    //     const config = {
-    //         rpcUrl: process.env.POLYGON_RPC_URL || "",
-    //         privateKey: process.env.PRIVATE_KEY || "",
-    //         contractAddress: process.env.CONTRACT_ADDRESS || "",
-    //     };
-    //     const manager = new ContractManager(config);
-    //     const receipt = await manager.storeCommitment(commitment);
+        console.log(`Data stored for user ${userId}:`, encryptedData);
 
-    //     // Respond with success
-    //     return res.status(200).json({ transactionReceipt: receipt });
-    //     } catch (error: any) {
-    //     console.error("Error storing data:", error);
-    //     return res.status(500).json({ message: "Failed to store data", error });
-    //     }
-    // } else {
-    //     res.setHeader("Allow", ["POST"]);
-    //     res.status(405).end(`Method ${req.method} Not Allowed`);
-    // }
+        // Respond with success
+        return res.status(200).json({ message: "Data successfully stored." });
+        } catch (error: any) {
+        console.error("Error storing data:", error);
+        return res.status(500).json({
+            message: "An error occurred while storing data.",
+            error: error.message || error,
+        });
+        }
+    } else if (req.method === "GET") {
+        const { userId } = req.query;
+
+        // Validate that `userId` is provided
+        if (!userId || typeof userId !== "string") {
+        return res.status(400).json({ message: "Missing or invalid userId parameter" });
+        }
+
+        try {
+        // Retrieve data for the user
+        const userData = encryptedDataStore[userId];
+
+        if (!userData) {
+            return res.status(404).json({ message: "No data found for the specified userId" });
+        }
+
+        // Respond with the stored data
+        return res.status(200).json({ data: userData });
+        } catch (error: any) {
+        console.error("Error retrieving data:", error);
+        return res.status(500).json({
+            message: "An error occurred while retrieving data.",
+            error: error.message || error,
+        });
+        }
+    } else {
+        // Handle unsupported methods
+        res.setHeader("Allow", ["POST", "GET"]);
+        return res.status(405).end(`Method ${req.method} Not Allowed`);
+    }
 }
