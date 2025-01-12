@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
-import { verifyProof } from "@/lib/zkp"; // Function to verify ZKP proof
+import { verifyProof } from "@/app/lib/zkp"; // Function to verify ZKP proof
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {

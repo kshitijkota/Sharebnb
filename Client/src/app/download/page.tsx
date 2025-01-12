@@ -13,11 +13,11 @@ export default function RetrieveData() {
     // Function to generate a ZKP proof
     const generateProof = async (userId: string): Promise<{ proof: any; publicSignals: any } | null> => {
         try {
-        // Placeholder for proof generation logic
-        const circuitInput = { userId: BigInt(userId).toString() }; // Example circuit input
-        const wasmFilePath = "/path/to/circuit.wasm"; // Update with actual path
-        const zkeyFilePath = "/path/to/circuit_final.zkey"; // Update with actual path
+        const circuitInput = "../lib/circom/circuit.circom"; // Example circuit input
+        const wasmFilePath = "../lib/circom/circuit_js/circuit.wasm"; // Update with actual path
+        const zkeyFilePath = "../lib/circom/circuit.circom"; // Update with actual path
 
+        // Generate ZKP proof using Groth16
         const { proof, publicSignals } = await groth16.fullProve(circuitInput, wasmFilePath, zkeyFilePath);
 
         console.log("Proof generated:", proof);
@@ -34,8 +34,15 @@ export default function RetrieveData() {
     // Function to decrypt data
     const decryptData = (encryptedData: string, key: string): string => {
         try {
-        // Placeholder decryption logic (replace with your decryption algorithm)
-        const decrypted = atob(encryptedData); // Simulates simple Base64 decryption
+        // Use the encryption key to decrypt the data (example)
+        const encryptedBytes = atob(encryptedData); // Decoding from Base64
+        let decrypted = "";
+
+        // Simple decryption using the key
+        for (let i = 0; i < encryptedBytes.length; i++) {
+            decrypted += String.fromCharCode(encryptedBytes.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+
         return decrypted;
         } catch (err) {
         console.error("Error decrypting data:", err);
