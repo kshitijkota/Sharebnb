@@ -13,6 +13,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { Shield, Scissors, Key } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { splitAndEncryptData, Fragment } from "@/lib/dataProcessor";
+import { processAndUploadData } from "@/lib/uploadProcessor";
 
 export default function Home() {
   const [data, setData] = useState<string>("");
@@ -42,6 +43,7 @@ export default function Home() {
     document.body.removeChild(element);
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -52,32 +54,27 @@ export default function Home() {
         throw new Error("Invalid input data, encryption key, or fragment size.");
       }
 
-      // Split and encrypt the data into fragments
-      const encryptedFragments = splitAndEncryptData(data, fragmentSize, encryptionKey);
-      setFragments(encryptedFragments);
-
       // Define the userId (this can be dynamic if tied to authentication)
       const userId = "user123";
 
-      const response = await fetch("http://localhost:3000/api/storeData", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, encryptedData: encryptedFragments }),
+      // Use the external function to process and upload data
+      const { encryptedFragments, response } = await processAndUploadData({
+        userId,
+        data,
+        encryptionKey,
+        fragmentSize,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to store data");
-      }
+      setFragments(encryptedFragments);
 
-      const result = await response.json();
-      console.log("Data successfully stored:", result);
+      console.log("Data successfully stored:", response);
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoading(false);
     }
   };
+
 
 
   return (
