@@ -703,13 +703,18 @@ async function processAndUploadData({ userId, data, encryptionKey, fragmentSize 
             userId,
             encryptedData: encryptedFragments
         };
-        // Make the API call to upload data to the server
-        const response = await fetch("/api/storeData", {
+        // Make the API call to the separate Next.js project
+        // Assuming the other project runs on port 3001
+        const API_URL = 'http://localhost:3000';
+        const response = await fetch(`${API_URL}/api/storeData`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            // Enable CORS
+            mode: 'cors',
+            credentials: 'omit'
         });
         if (!response.ok) {
             const errorData = await response.json();

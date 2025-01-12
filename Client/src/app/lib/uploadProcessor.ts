@@ -1,8 +1,8 @@
 import { ethers } from "ethers";
 import { splitAndEncryptData, Fragment } from "@/lib/dataProcessor";
 import {
-  CommitmentStorage,
-  CommitmentStorage__factory
+    CommitmentStorage,
+    CommitmentStorage__factory
 } from "@/lib/typechain-types";
 
 export interface UploadProcessorParams {
@@ -54,13 +54,19 @@ export async function processAndUploadData({
             encryptedData: encryptedFragments,
         };
 
-        // Make the API call to upload data to the server
-        const response = await fetch("/api/storeData", {
+        // Make the API call to the separate Next.js project
+        // Assuming the other project runs on port 3001
+        const API_URL = 'http://localhost:3000';
+
+        const response = await fetch(`${API_URL}/api/storeData`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
+            // Enable CORS
+            mode: 'cors',
+            credentials: 'omit'
         });
 
         if (!response.ok) {
