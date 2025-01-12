@@ -377,6 +377,10 @@ img, video {
   display: none;
 }
 
+.static {
+  position: static;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;

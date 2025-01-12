@@ -1,7 +1,9 @@
 import { ethers } from "ethers";
 import { splitAndEncryptData, Fragment } from "@/lib/dataProcessor";
-import { CommitmentStorage } from "@/lib/typechain-types"
-import { CommitmentStorage__factory } from "blockchain-setup/typechain-types"
+import {
+  CommitmentStorage,
+  CommitmentStorage__factory
+} from "@/lib/typechain-types";
 
 export interface UploadProcessorParams {
     userId: string;
