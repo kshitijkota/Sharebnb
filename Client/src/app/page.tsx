@@ -45,39 +45,31 @@ export default function Home() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    try {
-      // Send encrypted data to the server
-      const response = await fetch("/api/uploadEncryptedData", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          encryptedData: data,
-          encryptionKey,
-          randomness: "random-value-for-commitment", // Replace or generate randomness dynamically
-        }),
-      });
+  try {
+    const response = await fetch("https://your-server-app.com/api/storeData", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ encryptedData, commitment }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to upload data");
-      }
-
-      const result = await response.json();
-      console.log("Data uploaded successfully:", result);
-
-      // Process response fragments or other data if necessary
-      setFragments(result.fragments || []);
-      alert("Data uploaded and processed successfully!");
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to store data");
     }
-  };
+
+    const result = await response.json();
+    console.log("Data successfully stored:", result);
+  } catch (error) {
+    setError(error instanceof Error ? error.message : "An error occurred");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 py-8 px-4 sm:px-6 lg:px-8">
