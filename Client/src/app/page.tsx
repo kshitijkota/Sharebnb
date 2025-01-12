@@ -12,19 +12,17 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Shield, Scissors, Key } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { splitAndEncryptData, Fragment } from "../../utils/dataProcessor";
 
 export default function Home() {
   const [data, setData] = useState<string>("");
   const [fragmentSize, setFragmentSize] = useState<number>(16);
   const [encryptionKey, setEncryptionKey] = useState<string>("");
-  const [fragments, setFragments] = useState<
-    { index: number; encryptedData: string }[]
-  >([]);
+  const [fragments, setFragments] = useState<Fragment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
   const generateKey = () => {
-    // Generate a random 32-character encryption key
     const key = Array(32)
       .fill(0)
       .map(() =>
@@ -45,31 +43,47 @@ export default function Home() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  try {
-    const response = await fetch("https://your-server-app.com/api/storeData", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ encryptedData, commitment }),
-    });
+    try {
+      if (!data || !encryptionKey || fragmentSize <= 0) {
+        throw new Error("Invalid input data, encryption key, or fragment size.");
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to store data");
+      // Split and encrypt the data into fragments
+      const encryptedFragments = splitAndEncryptData(
+        data,
+        fragmentSize,
+        encryptionKey
+      );
+      setFragments(encryptedFragments);
+
+      // Commitments can be derived from encrypted data or fragments
+      const commitment = encryptedFragments
+        .map((fragment) => fragment.encryptedData)
+        .join("");
+
+      const response = await fetch("http://localhost:3000/api/storeData", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fragments: encryptedFragments, commitment }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to store data");
+      }
+
+      const result = await response.json();
+      console.log("Data successfully stored:", result);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setLoading(false);
     }
-
-    const result = await response.json();
-    console.log("Data successfully stored:", result);
-  } catch (error) {
-    setError(error instanceof Error ? error.message : "An error occurred");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -152,7 +166,7 @@ export default function Home() {
                 className="w-full bg-primary text-gray-100 hover:bg-primary-dark"
                 disabled={loading}
               >
-                {loading ? "Processing..." : "Fragment and Encrypt"}
+                {loading ? "Processing..." : "Upload"}
               </Button>
             </form>
 
