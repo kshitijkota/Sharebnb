@@ -11,12 +11,6 @@
   "description": "",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "@nomicfoundation/hardhat-verify": "^2.0.12",
-    "@nomiclabs/hardhat-etherscan": "^3.1.8",
-    "hardhat": "^2.22.17"
-  },
-  "dependencies": {
-    "@truffle/hdwallet-provider": "^2.1.15",
-    "dotenv": "^16.4.7"
+    "hardhat": "^2.22.18"
   }
 }
