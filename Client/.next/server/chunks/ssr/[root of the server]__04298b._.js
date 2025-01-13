@@ -168,14 +168,14 @@ function RetrieveData() {
     const [retrievedData, setRetrievedData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [isLoading, setIsLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    // Function to generate a ZKP proof
     const generateProof = async (userId)=>{
         try {
             const input = {
                 userId: parseInt(userId)
             };
             const { proof, publicSignals } = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$src$2f$groth16$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__groth16$3e$__["groth16"].fullProve(input, "/circuits/circuit.wasm", "/circuits/circuit_final.zkey");
-            console.log("Proof generated successfully");
+            console.log("Generated proof:", proof);
+            console.log("Public signals:", publicSignals);
             return {
                 proof,
                 publicSignals
@@ -185,7 +185,6 @@ function RetrieveData() {
             throw new Error("Failed to generate zero-knowledge proof. Please check the circuit files and try again.");
         }
     };
-    // Function to verify the proof
     const verifyProof = async (proof, publicSignals)=>{
         try {
             const response = await fetch("/circuits/verification_key.json");
@@ -193,13 +192,13 @@ function RetrieveData() {
                 throw new Error(`Failed to fetch verification key: ${response.status} ${response.statusText}`);
             }
             const vKey = await response.json();
+            console.log("Verification key:", vKey);
             return await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$snarkjs$2f$src$2f$groth16$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__$2a$__as__groth16$3e$__["groth16"].verify(vKey, publicSignals, proof);
         } catch (err) {
             console.error("Error verifying proof:", err.message || err);
             throw new Error("Verification process failed. Please ensure the verification key is correct.");
         }
     };
-    // Function to decrypt data using the encryption key`
     const decryptData = (encryptedData, key)=>{
         try {
             const encryptedBytes = Buffer.from(encryptedData, "base64");
@@ -219,23 +218,40 @@ function RetrieveData() {
         setRetrievedData(null);
         setIsLoading(true);
         try {
+            console.log("Starting submission with userId:", userId);
             if (!userId || !encryptionKey) {
                 throw new Error("User ID and Encryption Key are required.");
             }
+            // Generate and verify proof
             const zkpResult = await generateProof(userId);
+            console.log("ZKP Result:", zkpResult);
             if (!zkpResult) {
                 throw new Error("Zero-knowledge proof generation failed.");
             }
             const { proof, publicSignals } = zkpResult;
             const isValid = await verifyProof(proof, publicSignals);
+            console.log("Proof verification result:", isValid);
             if (!isValid) {
                 throw new Error("Proof verification failed. Invalid proof.");
             }
-            const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].post("/api/fetchData", {
+            // Get verification key
+            const vkResponse = await fetch("/circuits/verification_key.json");
+            const verificationKey = await vkResponse.json();
+            // Prepare payload
+            const payload = {
                 userId,
                 proof,
-                publicSignals
+                publicSignals,
+                verificationKey
+            };
+            console.log("Sending payload to API:", payload);
+            // Make API request
+            const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].post("http://localhost:3000/api/fetchData", payload, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
+            console.log("API Response:", response.data);
             if (response.data.encryptedFragments) {
                 const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
                 setRetrievedData(decryptedData);
@@ -243,8 +259,8 @@ function RetrieveData() {
                 throw new Error("Server did not return encrypted data fragments.");
             }
         } catch (err) {
-            console.error("Error occurred:", err.message || err);
-            setError(err.message || "An unexpected error occurred.");
+            console.error("Error details:", err.response?.data || err.message || err);
+            setError(err.response?.data?.error || err.message || "An unexpected error occurred.");
         } finally{
             setIsLoading(false);
         }
@@ -257,7 +273,7 @@ function RetrieveData() {
                 children: "Retrieve and Decrypt Data"
             }, void 0, false, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 110,
+                lineNumber: 126,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -272,25 +288,25 @@ function RetrieveData() {
                                 children: "User ID:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 113,
+                                lineNumber: 129,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                 type: "text",
                                 id: "userId",
-                                className: "w-full p-2 border rounded",
+                                className: "w-full p-2 border rounded text-black",
                                 value: userId,
                                 onChange: (e)=>setUserId(e.target.value),
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 114,
+                                lineNumber: 130,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 112,
+                        lineNumber: 128,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -301,25 +317,25 @@ function RetrieveData() {
                                 children: "Encryption Key:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 124,
+                                lineNumber: 140,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                 type: "password",
                                 id: "encryptionKey",
-                                className: "w-full p-2 border rounded",
+                                className: "w-full p-2 border rounded text-black",
                                 value: encryptionKey,
                                 onChange: (e)=>setEncryptionKey(e.target.value),
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 125,
+                                lineNumber: 141,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 123,
+                        lineNumber: 139,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -329,13 +345,13 @@ function RetrieveData() {
                         children: isLoading ? "Processing..." : "Fetch and Decrypt Data"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 134,
+                        lineNumber: 150,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 111,
+                lineNumber: 127,
                 columnNumber: 13
             }, this),
             error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -345,7 +361,7 @@ function RetrieveData() {
                         children: "Error:"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 145,
+                        lineNumber: 161,
                         columnNumber: 21
                     }, this),
                     " ",
@@ -353,7 +369,7 @@ function RetrieveData() {
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 144,
+                lineNumber: 160,
                 columnNumber: 17
             }, this),
             retrievedData && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -364,7 +380,7 @@ function RetrieveData() {
                         children: "Decrypted Data:"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 151,
+                        lineNumber: 167,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("pre", {
@@ -372,19 +388,19 @@ function RetrieveData() {
                         children: retrievedData
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 152,
+                        lineNumber: 168,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 150,
+                lineNumber: 166,
                 columnNumber: 17
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/download/page.tsx",
-        lineNumber: 109,
+        lineNumber: 125,
         columnNumber: 9
     }, this);
 }
