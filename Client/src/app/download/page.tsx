@@ -11,7 +11,6 @@ export default function RetrieveData() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Function to generate a ZKP proof
     const generateProof = async (userId: string): Promise<{ proof: any; publicSignals: any } | null> => {
         try {
             const input = { userId: parseInt(userId) };
@@ -20,7 +19,8 @@ export default function RetrieveData() {
                 "/circuits/circuit.wasm",
                 "/circuits/circuit_final.zkey"
             );
-            console.log("Proof generated successfully");
+            console.log("Generated proof:", proof);
+            console.log("Public signals:", publicSignals);
             return { proof, publicSignals };
         } catch (err: any) {
             console.error("Error generating proof:", err.message || err);
@@ -28,16 +28,14 @@ export default function RetrieveData() {
         }
     };
 
-    // Function to verify the proof
     const verifyProof = async (proof: any, publicSignals: any): Promise<boolean> => {
         try {
             const response = await fetch("/circuits/verification_key.json");
-
             if (!response.ok) {
                 throw new Error(`Failed to fetch verification key: ${response.status} ${response.statusText}`);
             }
-
             const vKey = await response.json();
+            console.log("Verification key:", vKey);
             return await groth16.verify(vKey, publicSignals, proof);
         } catch (err: any) {
             console.error("Error verifying proof:", err.message || err);
@@ -45,16 +43,13 @@ export default function RetrieveData() {
         }
     };
 
-    // Function to decrypt data using the encryption key`
     const decryptData = (encryptedData: string, key: string): string => {
         try {
             const encryptedBytes = Buffer.from(encryptedData, "base64");
             let decrypted = "";
-
             for (let i = 0; i < encryptedBytes.length; i++) {
                 decrypted += String.fromCharCode(encryptedBytes[i] ^ key.charCodeAt(i % key.length));
             }
-
             return decrypted;
         } catch (err: any) {
             console.error("Error decrypting data:", err.message || err);
@@ -69,27 +64,48 @@ export default function RetrieveData() {
         setIsLoading(true);
 
         try {
+            console.log("Starting submission with userId:", userId);
             if (!userId || !encryptionKey) {
                 throw new Error("User ID and Encryption Key are required.");
             }
 
+            // Generate and verify proof
             const zkpResult = await generateProof(userId);
+            console.log("ZKP Result:", zkpResult);
+
             if (!zkpResult) {
                 throw new Error("Zero-knowledge proof generation failed.");
             }
 
             const { proof, publicSignals } = zkpResult;
             const isValid = await verifyProof(proof, publicSignals);
+            console.log("Proof verification result:", isValid);
 
             if (!isValid) {
                 throw new Error("Proof verification failed. Invalid proof.");
             }
 
-            const response = await axios.post("/api/fetchData", {
+            // Get verification key
+            const vkResponse = await fetch("/circuits/verification_key.json");
+            const verificationKey = await vkResponse.json();
+
+            // Prepare payload
+            const payload = {
                 userId,
                 proof,
                 publicSignals,
+                verificationKey
+            };
+            console.log("Sending payload to API:", payload);
+
+            // Make API request
+            const response = await axios.post("http://localhost:3000/api/fetchData", payload, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
+
+            console.log("API Response:", response.data);
 
             if (response.data.encryptedFragments) {
                 const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
@@ -98,8 +114,8 @@ export default function RetrieveData() {
                 throw new Error("Server did not return encrypted data fragments.");
             }
         } catch (err: any) {
-            console.error("Error occurred:", err.message || err);
-            setError(err.message || "An unexpected error occurred.");
+            console.error("Error details:", err.response?.data || err.message || err);
+            setError(err.response?.data?.error || err.message || "An unexpected error occurred.");
         } finally {
             setIsLoading(false);
         }
@@ -114,7 +130,7 @@ export default function RetrieveData() {
                     <input
                         type="text"
                         id="userId"
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded text-black"
                         value={userId}
                         onChange={(e) => setUserId(e.target.value)}
                         required
@@ -125,7 +141,7 @@ export default function RetrieveData() {
                     <input
                         type="password"
                         id="encryptionKey"
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded text-black"
                         value={encryptionKey}
                         onChange={(e) => setEncryptionKey(e.target.value)}
                         required
