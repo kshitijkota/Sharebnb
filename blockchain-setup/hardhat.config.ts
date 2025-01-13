@@ -19,26 +19,20 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    amoy: {
-      url: "https://rpc-amoy.polygon.technology",
-      chainId: 80002,
-      accounts: [PRIVATE_KEY],
-      gasPrice: 50000000000 // 50 gwei
-    }
+    localhost: {
+      url: "http://127.0.0.1:8545",
+    },
+    mumbai: {
+      url: "https://rpc-amoy.polygon.technology/", // Use an RPC URL for Polygon Mumbai (e.g., from MaticVigil, Alchemy, or Infura)
+      accounts: ["d87de29009328f4ec7b9cdbb3c9084fb0e75c2c8e04210dad8e7c1d70e7ea62c"], // Add your private key (use env variable for security)
+      chainId: 80001, // Mumbai Testnet Chain ID
+    },
+    fuji: {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      accounts: ["1464cfd85c09e9582a0ce08caa5c561f6d66a81743dc432bd6d82c77c0f684d5"],
+      chainId: 43113,// Use your wallet's private key
+    },
   },
-  etherscan: {
-    apiKey: POLYGONSCAN_API_KEY,
-    customChains: [
-      {
-        network: "amoy",
-        chainId: 80002,
-        urls: {
-          apiURL: "https://api-amoy.polygonscan.com/api",
-          browserURL: "https://amoy.polygonscan.com"
-        }
-      }
-    ]
-  }
 };
 
 export default config;

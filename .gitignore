@@ -12,6 +12,7 @@ Server/.next/
 # Dependency lock files
 Client/bun.lockb
 Server/bun.lockb
+blockchain-setup/bun.lockb
 Client/package-lock.json
 Server/package-lock.json
 Client/yarn.lock
