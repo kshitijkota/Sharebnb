@@ -85,33 +85,16 @@ export default function RetrieveData() {
                 throw new Error("Proof verification failed. Invalid proof.");
             }
 
-            // Get verification key
-            const vkResponse = await fetch("/circuits/verification_key.json");
-            const verificationKey = await vkResponse.json();
-
-            // Prepare payload
-            const payload = {
-                userId,
-                proof,
-                publicSignals,
-                verificationKey
-            };
-            console.log("Sending payload to API:", payload);
-
-            // Make API request
-            const response = await axios.post("http://localhost:3000/api/fetchData", payload, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
+            // If proof is valid, fetch the encrypted data through fetchData endpoint
+            // which includes blockchain commitment verification
+            const response = await axios.get(`http://localhost:3000/api/fetchData?userId=${userId}`);
             console.log("API Response:", response.data);
 
-            if (response.data.encryptedFragments) {
+            if (response.data.encryptedFragments) {  // Note: changed from data to encryptedFragments
                 const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
                 setRetrievedData(decryptedData);
             } else {
-                throw new Error("Server did not return encrypted data fragments.");
+                throw new Error("No data found for this user.");
             }
         } catch (err: any) {
             console.error("Error details:", err.response?.data || err.message || err);

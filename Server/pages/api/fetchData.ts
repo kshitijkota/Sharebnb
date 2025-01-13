@@ -2,13 +2,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
-import { verifyProof } from "@/app/lib/zkp";
 import Cors from "cors";
 
 // Initialize CORS middleware
 const cors = Cors({
-    methods: ['POST', 'OPTIONS'],
-    origin: ['http://localhost:3000', 'http://localhost:3001'], // Allow both origins
+    methods: ['GET', 'OPTIONS'],
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
 });
 
@@ -46,62 +45,29 @@ export default async function handler(
     // Log incoming request
     console.log("Request method:", req.method);
     console.log("Request headers:", req.headers);
-    console.log("Request body:", req.body);
+    console.log("Request query:", req.query);
 
     // Validate request method
-    if (req.method !== 'POST') {
+    if (req.method !== 'GET') {
         return res.status(405).json({
             error: 'Method not allowed',
-            allowedMethods: ['POST']
+            allowedMethods: ['GET']
         });
     }
 
     try {
-        const { userId, proof, publicSignals, verificationKey } = req.body;
+        const { userId } = req.query;
 
-        // Validate required fields
-        const missingFields = [];
-        if (!userId) missingFields.push('userId');
-        if (!proof) missingFields.push('proof');
-        if (!publicSignals) missingFields.push('publicSignals');
-        if (!verificationKey) missingFields.push('verificationKey');
-
-        if (missingFields.length > 0) {
+        if (!userId) {
             return res.status(400).json({
-                error: 'Missing required fields',
-                missingFields,
-                receivedFields: Object.keys(req.body)
+                error: 'Missing required field: userId'
             });
         }
 
-        // Log the values we're about to verify
-        console.log("Verifying proof with:", {
-            userId,
-            proof: JSON.stringify(proof),
-            publicSignals: JSON.stringify(publicSignals),
-            verificationKey: JSON.stringify(verificationKey)
-        });
-
-        // Step 1: Verify ZKP proof
-        try {
-            const isValidProof = await verifyProof(userId, proof, publicSignals, verificationKey);
-            console.log("Proof verification result:", isValidProof);
-
-            if (!isValidProof) {
-                return res.status(403).json({ error: 'Invalid ZKP proof' });
-            }
-        } catch (verifyError) {
-            console.error("Proof verification error:", verifyError);
-            return res.status(500).json({
-                error: 'Proof verification failed',
-                details: verifyError instanceof Error ? verifyError.message : 'Unknown verification error'
-            });
-        }
-
-        // Step 2: Fetch user data
+        // Step 1: Fetch user data
         try {
             const apiUrl = new URL('http://localhost:3000/api/storeData');
-            apiUrl.searchParams.append('userId', userId);
+            apiUrl.searchParams.append('userId', userId.toString());
 
             console.log("Fetching data from:", apiUrl.toString());
 
@@ -123,15 +89,15 @@ export default async function handler(
             const { data: encryptedFragments } = await response.json();
             console.log("Retrieved encrypted fragments");
 
-            // Step 3: Verify blockchain commitment
+            // Step 2: Verify blockchain commitment
             try {
-                const provider = new ethers.JsonRpcProvider("http://localhost:8545");
+                const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
                 const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
                 console.log("Connecting to contract at:", contractAddress);
 
                 const commitmentStorage = CommitmentStorage__factory.connect(contractAddress, provider);
-                const onChainCommitments = await commitmentStorage.getCommitments(userId);
+                const onChainCommitments = await commitmentStorage.getCommitments(userId.toString());
 
                 console.log("On-chain commitments:", onChainCommitments);
 
@@ -149,7 +115,7 @@ export default async function handler(
                     return res.status(400).json({ error: 'Commitment verification failed' });
                 }
 
-                // Step 4: Return encrypted fragments
+                // Step 3: Return encrypted fragments
                 return res.status(200).json({ encryptedFragments });
 
             } catch (blockchainError) {
