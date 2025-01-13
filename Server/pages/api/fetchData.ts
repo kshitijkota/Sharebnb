@@ -3,6 +3,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
 import Cors from "cors";
+import path from "path";
+import fs from "fs";
 
 // Initialize CORS middleware
 const cors = Cors({
@@ -27,6 +29,28 @@ function runMiddleware(
     });
 }
 
+// Helper to load contract address dynamically from Hardhat artifacts
+function getContractAddress(): string {
+    const artifactsPath = path.resolve(
+        process.env.HARDHAT_ARTIFACTS_PATH || "/Users/kshitij/Personal/Projects/Airbnb_for_data/blockchain-setup/artifacts",
+        "contracts",
+        "CommitmentStorage.sol",
+        "CommitmentStorage.json"
+    );
+
+    if (!fs.existsSync(artifactsPath)) {
+        throw new Error(`Deployment artifact not found at ${artifactsPath}. Ensure the contract is deployed.`);
+    }
+
+    const artifact = JSON.parse(fs.readFileSync(artifactsPath, "utf-8"));
+
+    if (!artifact.address) {
+        throw new Error("Contract address not found in the artifact.");
+    }
+
+    return artifact.address;
+}
+
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -38,7 +62,7 @@ export default async function handler(
         console.error('CORS Error:', error);
         return res.status(500).json({
             error: 'CORS configuration error',
-            details: error instanceof Error ? error.message : 'Unknown error'
+            details: error instanceof Error ? error.message : 'Unknown error',
         });
     }
 
@@ -51,7 +75,7 @@ export default async function handler(
     if (req.method !== 'GET') {
         return res.status(405).json({
             error: 'Method not allowed',
-            allowedMethods: ['GET']
+            allowedMethods: ['GET'],
         });
     }
 
@@ -60,7 +84,7 @@ export default async function handler(
 
         if (!userId) {
             return res.status(400).json({
-                error: 'Missing required field: userId'
+                error: 'Missing required field: userId',
             });
         }
 
@@ -74,15 +98,15 @@ export default async function handler(
             const response = await fetch(apiUrl.toString(), {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                },
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
                 return res.status(response.status).json({
                     error: 'Data fetch failed',
-                    details: errorData.message
+                    details: errorData.message,
                 });
             }
 
@@ -92,7 +116,9 @@ export default async function handler(
             // Step 2: Verify blockchain commitment
             try {
                 const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
-                const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+                // const contractAddress = getContractAddress();
+                const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Replace with actual address
+
 
                 console.log("Connecting to contract at:", contractAddress);
 
@@ -108,7 +134,8 @@ export default async function handler(
                 console.log("Calculated commitment:", calculatedCommitment);
 
                 const commitmentExists = onChainCommitments.some(
-                    commitment => commitment.toString().toLowerCase() === calculatedCommitment.toLowerCase()
+                    (commitment: string) =>
+                        commitment.toString().toLowerCase() === calculatedCommitment.toLowerCase()
                 );
 
                 if (!commitmentExists) {
@@ -122,7 +149,7 @@ export default async function handler(
                 console.error('Blockchain verification error:', blockchainError);
                 return res.status(500).json({
                     error: 'Blockchain verification failed',
-                    details: blockchainError instanceof Error ? blockchainError.message : 'Unknown error'
+                    details: blockchainError instanceof Error ? blockchainError.message : 'Unknown error',
                 });
             }
 
@@ -130,7 +157,7 @@ export default async function handler(
             console.error('Data fetch error:', fetchError);
             return res.status(500).json({
                 error: 'Failed to fetch data',
-                details: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+                details: fetchError instanceof Error ? fetchError.message : 'Unknown error',
             });
         }
 
@@ -138,7 +165,7 @@ export default async function handler(
         console.error('Server error:', error);
         return res.status(500).json({
             error: 'Internal server error',
-            details: error instanceof Error ? error.message : 'Unknown error'
+            details: error instanceof Error ? error.message : 'Unknown error',
         });
     }
 }
