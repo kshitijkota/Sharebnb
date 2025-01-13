@@ -10,7 +10,7 @@ const POLYGONSCAN_API_KEY = process.env.POLYGONSCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    version: "0.8.28",  // Updated to match your contract's version
     settings: {
       optimizer: {
         enabled: true,
