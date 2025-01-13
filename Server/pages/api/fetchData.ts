@@ -1,15 +1,7 @@
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
-import { verifyProof } from "/home/grass/projects/hackathon/Airbnb_for_data/Server/app/lib/zkp";
-import { NextApiRequest, NextApiResponse } from 'next';
-
-if (!process.env.ETHEREUM_RPC_URL) {
-    throw new Error("ETHEREUM_RPC_URL is not configured");
-}
-
-if (!process.env.COMMITMENT_CONTRACT_ADDRESS) {
-    throw new Error("COMMITMENT_CONTRACT_ADDRESS is not configured");
-}
+import { verifyProof } from "@/app/lib/zkp"; // Function to verify ZKP proof
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== "POST") {

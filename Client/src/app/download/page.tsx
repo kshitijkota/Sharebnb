@@ -9,113 +9,151 @@ export default function RetrieveData() {
     const [encryptionKey, setEncryptionKey] = useState("");
     const [retrievedData, setRetrievedData] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Function to generate a ZKP proof
     const generateProof = async (userId: string): Promise<{ proof: any; publicSignals: any } | null> => {
         try {
-        // Placeholder for proof generation logic
-        const circuitInput = { userId: BigInt(userId).toString() }; // Example circuit input
-        const wasmFilePath = "/path/to/circuit.wasm"; // Update with actual path
-        const zkeyFilePath = "/path/to/circuit_final.zkey"; // Update with actual path
-
-        const { proof, publicSignals } = await groth16.fullProve(circuitInput, wasmFilePath, zkeyFilePath);
-
-        console.log("Proof generated:", proof);
-        console.log("Public signals:", publicSignals);
-
-        return { proof, publicSignals };
-        } catch (err) {
-        console.error("Error generating proof:", err);
-        setError("Failed to generate proof.");
-        return null;
+            const input = { userId: parseInt(userId) };
+            const { proof, publicSignals } = await groth16.fullProve(
+                input,
+                "/circuits/circuit.wasm",
+                "/circuits/circuit_final.zkey"
+            );
+            console.log("Proof generated successfully");
+            return { proof, publicSignals };
+        } catch (err: any) {
+            console.error("Error generating proof:", err.message || err);
+            throw new Error("Failed to generate zero-knowledge proof. Please check the circuit files and try again.");
         }
     };
 
-    // Function to decrypt data
+    // Function to verify the proof
+    const verifyProof = async (proof: any, publicSignals: any): Promise<boolean> => {
+        try {
+            const response = await fetch("/circuits/verification_key.json");
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch verification key: ${response.status} ${response.statusText}`);
+            }
+
+            const vKey = await response.json();
+            return await groth16.verify(vKey, publicSignals, proof);
+        } catch (err: any) {
+            console.error("Error verifying proof:", err.message || err);
+            throw new Error("Verification process failed. Please ensure the verification key is correct.");
+        }
+    };
+
+    // Function to decrypt data using the encryption key`
     const decryptData = (encryptedData: string, key: string): string => {
         try {
-        // Placeholder decryption logic (replace with your decryption algorithm)
-        const decrypted = atob(encryptedData); // Simulates simple Base64 decryption
-        return decrypted;
-        } catch (err) {
-        console.error("Error decrypting data:", err);
-        setError("Failed to decrypt data. Ensure the encryption key is correct.");
-        return "";
+            const encryptedBytes = Buffer.from(encryptedData, "base64");
+            let decrypted = "";
+
+            for (let i = 0; i < encryptedBytes.length; i++) {
+                decrypted += String.fromCharCode(encryptedBytes[i] ^ key.charCodeAt(i % key.length));
+            }
+
+            return decrypted;
+        } catch (err: any) {
+            console.error("Error decrypting data:", err.message || err);
+            throw new Error("Decryption failed. Ensure the encryption key is correct.");
         }
     };
 
-    // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setRetrievedData(null);
-
-        if (!userId || !encryptionKey) {
-        setError("Please enter both User ID and Encryption Key.");
-        return;
-        }
+        setIsLoading(true);
 
         try {
-        // Generate ZKP proof
-        const zkpResult = await generateProof(userId);
-        if (!zkpResult) return;
+            if (!userId || !encryptionKey) {
+                throw new Error("User ID and Encryption Key are required.");
+            }
 
-        const { proof, publicSignals } = zkpResult;
+            const zkpResult = await generateProof(userId);
+            if (!zkpResult) {
+                throw new Error("Zero-knowledge proof generation failed.");
+            }
 
-        // Fetch data from the server
-        const response = await axios.post("/api/fetchData", {
-            userId,
-            proof,
-            publicSignals,
-        });
+            const { proof, publicSignals } = zkpResult;
+            const isValid = await verifyProof(proof, publicSignals);
 
-        if (response.status === 200) {
-            // Decrypt the data
-            const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
-            setRetrievedData(decryptedData);
-        } else {
-            setError(response.data.message || "Failed to fetch data.");
-        }
-        } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("An error occurred while fetching or processing the data.");
+            if (!isValid) {
+                throw new Error("Proof verification failed. Invalid proof.");
+            }
+
+            const response = await axios.post("/api/fetchData", {
+                userId,
+                proof,
+                publicSignals,
+            });
+
+            if (response.data.encryptedFragments) {
+                const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
+                setRetrievedData(decryptedData);
+            } else {
+                throw new Error("Server did not return encrypted data fragments.");
+            }
+        } catch (err: any) {
+            console.error("Error occurred:", err.message || err);
+            setError(err.message || "An unexpected error occurred.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div style={{ padding: "20px" }}>
-        <h1>Retrieve and Decrypt Data</h1>
-        <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: "10px" }}>
-            <label htmlFor="userId">User ID:</label>
-            <input
-                type="text"
-                id="userId"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                required
-            />
-            </div>
-            <div style={{ marginBottom: "10px" }}>
-            <label htmlFor="encryptionKey">Encryption Key:</label>
-            <input
-                type="password"
-                id="encryptionKey"
-                value={encryptionKey}
-                onChange={(e) => setEncryptionKey(e.target.value)}
-                required
-            />
-            </div>
-            <button type="submit">Fetch and Decrypt Data</button>
-        </form>
+        <div className="max-w-2xl mx-auto p-6">
+            <h1 className="text-2xl font-bold mb-6">Retrieve and Decrypt Data</h1>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label htmlFor="userId" className="block mb-2">User ID:</label>
+                    <input
+                        type="text"
+                        id="userId"
+                        className="w-full p-2 border rounded"
+                        value={userId}
+                        onChange={(e) => setUserId(e.target.value)}
+                        required
+                    />
+                </div>
+                <div>
+                    <label htmlFor="encryptionKey" className="block mb-2">Encryption Key:</label>
+                    <input
+                        type="password"
+                        id="encryptionKey"
+                        className="w-full p-2 border rounded"
+                        value={encryptionKey}
+                        onChange={(e) => setEncryptionKey(e.target.value)}
+                        required
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                    disabled={isLoading}
+                >
+                    {isLoading ? "Processing..." : "Fetch and Decrypt Data"}
+                </button>
+            </form>
 
-        {error && <p style={{ color: "red" }}>Error: {error}</p>}
-        {retrievedData && (
-            <div style={{ marginTop: "20px" }}>
-            <h2>Decrypted Data:</h2>
-            <p>{retrievedData}</p>
-            </div>
-        )}
+            {error && (
+                <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
+                    <strong>Error:</strong> {error}
+                </div>
+            )}
+
+            {retrievedData && (
+                <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-2">Decrypted Data:</h2>
+                    <pre className="p-4 bg-gray-100 rounded overflow-x-auto">
+                        {retrievedData}
+                    </pre>
+                </div>
+            )}
         </div>
     );
 }

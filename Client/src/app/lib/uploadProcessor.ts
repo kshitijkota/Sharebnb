@@ -74,13 +74,17 @@ export async function processAndUploadData({
             throw new Error(errorData.message || "Failed to store data on the server");
         }
 
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log("Server Response:", responseText);
+
+        const result = JSON.parse(responseText);
 
         return {
             encryptedFragments,
             response: result,
             transactionReceipt: receipt
         };
+        
     } catch (error) {
         console.error("Error in processAndUploadData:", error);
         throw error;
