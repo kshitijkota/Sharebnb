@@ -30,6 +30,39 @@ function runMiddleware(
     });
 }
 
+// Try each provider creation method until one works
+async function createProvider() {
+    try {
+        // Attempt 1: Basic JsonRpcProvider
+        const provider1 = new ethers.JsonRpcProvider("https://rpc-amoy.polygon.technology");
+        await provider1.getNetwork(); // Test the connection
+        return provider1;
+    } catch (error) {
+        console.log("First provider attempt failed, trying alternative...");
+        try {
+            // Attempt 2: Fully specified JsonRpcProvider
+            const provider2 = new ethers.JsonRpcProvider(
+                "https://rpc-amoy.polygon.technology",
+                {
+                    chainId: 80002,
+                    name: 'polygon-amoy',
+                    ensAddress: null
+                }
+            );
+            await provider2.getNetwork(); // Test the connection
+            return provider2;
+        } catch (error) {
+            console.log("Second provider attempt failed, trying fallback...");
+            // Attempt 3: Basic HTTP Provider
+            const fallbackProvider = new ethers.JsonRpcProvider({
+                url: "https://rpc-amoy.polygon.technology",
+                skipFetchSetup: true
+            });
+            return fallbackProvider;
+        }
+    }
+}
+
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -76,31 +109,24 @@ export default async function handler(
 
             // Step 2: Verify blockchain commitment
             try {
-                // Updated provider configuration
-                const provider = new ethers.JsonRpcProvider({
-                    url: "https://rpc-amoy.polygon.technology",
-                    chainId: 80002,
-                    name: "matic-amoy"
-                });
-                
+                const provider = await createProvider();
                 const contractAddress = "0xB75358cB48f472d3809c1eD36F34D4790e74042d";
 
                 console.log("Connecting to contract at:", contractAddress);
 
                 const commitmentStorage = CommitmentStorage__factory.connect(
-                    contractAddress, 
+                    contractAddress,
                     provider
                 );
-                
+
                 // Add retry logic for network calls
                 const getCommitments = async (retries = 3): Promise<CommitmentStructOutput[]> => {
                     try {
-                        return await commitmentStorage.getCommitments(userId.toString(), {
-                            gasPrice: ethers.parseUnits("50", "gwei"),
-                            gasLimit: 500000
-                        });
+                        return await commitmentStorage.getCommitments(userId.toString());
                     } catch (error) {
+                        console.error('GetCommitments error:', error);
                         if (retries > 0) {
+                            console.log(`Retry attempt ${4 - retries} for getCommitments`);
                             await new Promise(resolve => setTimeout(resolve, 1000));
                             return getCommitments(retries - 1);
                         }
@@ -118,7 +144,7 @@ export default async function handler(
                 console.log("Calculated commitment:", calculatedCommitment);
 
                 const commitmentExists = onChainCommitments.some(
-                    (commitmentStruct: CommitmentStructOutput) => 
+                    (commitmentStruct: CommitmentStructOutput) =>
                         commitmentStruct.commitment.toLowerCase() === calculatedCommitment.toLowerCase()
                 );
 
