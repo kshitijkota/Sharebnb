@@ -1,10 +1,11 @@
-// pages/api/fetchData.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
+import { CommitmentStructOutput } from "@/app/lib/typechain-types/CommitmentStorage";
 import Cors from "cors";
-import path from "path";
-import fs from "fs";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 // Initialize CORS middleware
 const cors = Cors({
@@ -29,49 +30,12 @@ function runMiddleware(
     });
 }
 
-// Helper to load contract address dynamically from Hardhat artifacts
-function getContractAddress(): string {
-    const artifactsPath = path.resolve(
-        process.env.HARDHAT_ARTIFACTS_PATH || "/Users/kshitij/Personal/Projects/Airbnb_for_data/blockchain-setup/artifacts",
-        "contracts",
-        "CommitmentStorage.sol",
-        "CommitmentStorage.json"
-    );
-
-    if (!fs.existsSync(artifactsPath)) {
-        throw new Error(`Deployment artifact not found at ${artifactsPath}. Ensure the contract is deployed.`);
-    }
-
-    const artifact = JSON.parse(fs.readFileSync(artifactsPath, "utf-8"));
-
-    if (!artifact.address) {
-        throw new Error("Contract address not found in the artifact.");
-    }
-
-    return artifact.address;
-}
-
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    // Enable CORS
-    try {
-        await runMiddleware(req, res, cors);
-    } catch (error) {
-        console.error('CORS Error:', error);
-        return res.status(500).json({
-            error: 'CORS configuration error',
-            details: error instanceof Error ? error.message : 'Unknown error',
-        });
-    }
+    await runMiddleware(req, res, cors);
 
-    // Log incoming request
-    console.log("Request method:", req.method);
-    console.log("Request headers:", req.headers);
-    console.log("Request query:", req.query);
-
-    // Validate request method
     if (req.method !== 'GET') {
         return res.status(405).json({
             error: 'Method not allowed',
@@ -93,8 +57,6 @@ export default async function handler(
             const apiUrl = new URL('http://localhost:3000/api/storeData');
             apiUrl.searchParams.append('userId', userId.toString());
 
-            console.log("Fetching data from:", apiUrl.toString());
-
             const response = await fetch(apiUrl.toString(), {
                 method: 'GET',
                 headers: {
@@ -111,20 +73,42 @@ export default async function handler(
             }
 
             const { data: encryptedFragments } = await response.json();
-            console.log("Retrieved encrypted fragments");
 
             // Step 2: Verify blockchain commitment
             try {
-                const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
-                // const contractAddress = getContractAddress();
-                const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Replace with actual address
-
+                // Updated provider configuration
+                const provider = new ethers.JsonRpcProvider({
+                    url: "https://rpc-amoy.polygon.technology",
+                    chainId: 80002,
+                    name: "matic-amoy"
+                });
+                
+                const contractAddress = "0xB75358cB48f472d3809c1eD36F34D4790e74042d";
 
                 console.log("Connecting to contract at:", contractAddress);
 
-                const commitmentStorage = CommitmentStorage__factory.connect(contractAddress, provider);
-                const onChainCommitments = await commitmentStorage.getCommitments(userId.toString());
+                const commitmentStorage = CommitmentStorage__factory.connect(
+                    contractAddress, 
+                    provider
+                );
+                
+                // Add retry logic for network calls
+                const getCommitments = async (retries = 3): Promise<CommitmentStructOutput[]> => {
+                    try {
+                        return await commitmentStorage.getCommitments(userId.toString(), {
+                            gasPrice: ethers.parseUnits("50", "gwei"),
+                            gasLimit: 500000
+                        });
+                    } catch (error) {
+                        if (retries > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            return getCommitments(retries - 1);
+                        }
+                        throw error;
+                    }
+                };
 
+                const onChainCommitments = await getCommitments();
                 console.log("On-chain commitments:", onChainCommitments);
 
                 const calculatedCommitment = ethers.keccak256(
@@ -134,15 +118,14 @@ export default async function handler(
                 console.log("Calculated commitment:", calculatedCommitment);
 
                 const commitmentExists = onChainCommitments.some(
-                    (commitment: string) =>
-                        commitment.toString().toLowerCase() === calculatedCommitment.toLowerCase()
+                    (commitmentStruct: CommitmentStructOutput) => 
+                        commitmentStruct.commitment.toLowerCase() === calculatedCommitment.toLowerCase()
                 );
 
                 if (!commitmentExists) {
                     return res.status(400).json({ error: 'Commitment verification failed' });
                 }
 
-                // Step 3: Return encrypted fragments
                 return res.status(200).json({ encryptedFragments });
 
             } catch (blockchainError) {
@@ -170,7 +153,6 @@ export default async function handler(
     }
 }
 
-// Configure API route options
 export const config = {
     api: {
         bodyParser: {
