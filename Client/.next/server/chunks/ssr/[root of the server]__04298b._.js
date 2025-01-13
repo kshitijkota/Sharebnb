@@ -234,29 +234,15 @@ function RetrieveData() {
             if (!isValid) {
                 throw new Error("Proof verification failed. Invalid proof.");
             }
-            // Get verification key
-            const vkResponse = await fetch("/circuits/verification_key.json");
-            const verificationKey = await vkResponse.json();
-            // Prepare payload
-            const payload = {
-                userId,
-                proof,
-                publicSignals,
-                verificationKey
-            };
-            console.log("Sending payload to API:", payload);
-            // Make API request
-            const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].post("http://localhost:3000/api/fetchData", payload, {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            // If proof is valid, fetch the encrypted data through fetchData endpoint
+            // which includes blockchain commitment verification
+            const response = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].get(`http://localhost:3000/api/fetchData?userId=${userId}`);
             console.log("API Response:", response.data);
             if (response.data.encryptedFragments) {
                 const decryptedData = decryptData(response.data.encryptedFragments, encryptionKey);
                 setRetrievedData(decryptedData);
             } else {
-                throw new Error("Server did not return encrypted data fragments.");
+                throw new Error("No data found for this user.");
             }
         } catch (err) {
             console.error("Error details:", err.response?.data || err.message || err);
@@ -273,7 +259,7 @@ function RetrieveData() {
                 children: "Retrieve and Decrypt Data"
             }, void 0, false, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 126,
+                lineNumber: 109,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -288,7 +274,7 @@ function RetrieveData() {
                                 children: "User ID:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 129,
+                                lineNumber: 112,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -300,13 +286,13 @@ function RetrieveData() {
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 130,
+                                lineNumber: 113,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 128,
+                        lineNumber: 111,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -317,7 +303,7 @@ function RetrieveData() {
                                 children: "Encryption Key:"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 140,
+                                lineNumber: 123,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -329,13 +315,13 @@ function RetrieveData() {
                                 required: true
                             }, void 0, false, {
                                 fileName: "[project]/src/app/download/page.tsx",
-                                lineNumber: 141,
+                                lineNumber: 124,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 139,
+                        lineNumber: 122,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -345,13 +331,13 @@ function RetrieveData() {
                         children: isLoading ? "Processing..." : "Fetch and Decrypt Data"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 150,
+                        lineNumber: 133,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 127,
+                lineNumber: 110,
                 columnNumber: 13
             }, this),
             error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -361,7 +347,7 @@ function RetrieveData() {
                         children: "Error:"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 161,
+                        lineNumber: 144,
                         columnNumber: 21
                     }, this),
                     " ",
@@ -369,7 +355,7 @@ function RetrieveData() {
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 160,
+                lineNumber: 143,
                 columnNumber: 17
             }, this),
             retrievedData && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -380,7 +366,7 @@ function RetrieveData() {
                         children: "Decrypted Data:"
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 167,
+                        lineNumber: 150,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("pre", {
@@ -388,19 +374,19 @@ function RetrieveData() {
                         children: retrievedData
                     }, void 0, false, {
                         fileName: "[project]/src/app/download/page.tsx",
-                        lineNumber: 168,
+                        lineNumber: 151,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/download/page.tsx",
-                lineNumber: 166,
+                lineNumber: 149,
                 columnNumber: 17
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/download/page.tsx",
-        lineNumber: 125,
+        lineNumber: 108,
         columnNumber: 9
     }, this);
 }
