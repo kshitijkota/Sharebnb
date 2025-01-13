@@ -1,4 +1,4 @@
-# ShareVault - Decentralized Data Storage Platform
+# Sharebnb - Decentralized Data Storage Platform
 
 ShareVault is a decentralized platform that allows users to securely store, share, and retrieve encrypted data, leveraging blockchain technology, Zero-Knowledge Proofs (ZKPs), and decentralized storage systems like IPFS/Filecoin. The platform ensures data privacy, integrity, and decentralization, enabling fair compensation for storage providers.
 
