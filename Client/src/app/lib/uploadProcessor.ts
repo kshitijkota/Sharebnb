@@ -4,6 +4,9 @@ import {
     CommitmentStorage,
     CommitmentStorage__factory
 } from "@/lib/typechain-types";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 export interface UploadProcessorParams {
     userId: string;
@@ -32,14 +35,26 @@ export async function processAndUploadData({
         const commitment = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(encryptedFragments)));
 
         // Blockchain Interaction
-        const provider = new ethers.JsonRpcProvider("http://localhost:8545");
-        const signer = await provider.getSigner();
+        const provider = new ethers.JsonRpcProvider("https://rpc-amoy.polygon.technology/");
+        
+        // Get private key from environment variables
+        const privateKey = process.env.NEXT_PUBLIC_PRIVATE_KEY;
+        if (!privateKey) {
+            throw new Error("Private key not found in environment variables");
+        }
 
-        const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-        const commitmentStorage = CommitmentStorage__factory.connect(contractAddress, signer);
+        // Create wallet instance
+        const wallet = new ethers.Wallet(privateKey, provider);
 
-        // Upload the commitment hash to the blockchain
-        const transaction = await commitmentStorage.addCommitment(commitment);
+        // Use your deployed contract address on Polygon Amoy
+        const contractAddress = "0xB75358cB48f472d3809c1eD36F34D4790e74042d"; // Replace with your deployed contract address
+        const commitmentStorage = CommitmentStorage__factory.connect(contractAddress, wallet);
+
+        // Upload the commitment hash to the blockchain with specific gas settings
+        const transaction = await commitmentStorage.addCommitment(commitment, {
+            gasPrice: ethers.parseUnits("50", "gwei"),
+            gasLimit: 5000000
+        });
 
         // Wait for the transaction to be mined
         const receipt = await transaction.wait();
@@ -55,7 +70,6 @@ export async function processAndUploadData({
         };
 
         // Make the API call to the separate Next.js project
-        // Assuming the other project runs on port 3001
         const API_URL = 'http://localhost:3000';
 
         const response = await fetch(`${API_URL}/api/storeData`, {
@@ -64,7 +78,6 @@ export async function processAndUploadData({
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
-            // Enable CORS
             mode: 'cors',
             credentials: 'omit'
         });
