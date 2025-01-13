@@ -2,9 +2,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from "ethers";
 import { CommitmentStorage__factory } from "@/app/lib/typechain-types";
+import { CommitmentStructOutput } from "@/app/lib/typechain-types/CommitmentStorage";
 import Cors from "cors";
-import path from "path";
-import fs from "fs";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 // Initialize CORS middleware
 const cors = Cors({
@@ -27,28 +29,6 @@ function runMiddleware(
             return resolve(result);
         });
     });
-}
-
-// Helper to load contract address dynamically from Hardhat artifacts
-function getContractAddress(): string {
-    const artifactsPath = path.resolve(
-        process.env.HARDHAT_ARTIFACTS_PATH || "/Users/kshitij/Personal/Projects/Airbnb_for_data/blockchain-setup/artifacts",
-        "contracts",
-        "CommitmentStorage.sol",
-        "CommitmentStorage.json"
-    );
-
-    if (!fs.existsSync(artifactsPath)) {
-        throw new Error(`Deployment artifact not found at ${artifactsPath}. Ensure the contract is deployed.`);
-    }
-
-    const artifact = JSON.parse(fs.readFileSync(artifactsPath, "utf-8"));
-
-    if (!artifact.address) {
-        throw new Error("Contract address not found in the artifact.");
-    }
-
-    return artifact.address;
 }
 
 export default async function handler(
@@ -115,15 +95,20 @@ export default async function handler(
 
             // Step 2: Verify blockchain commitment
             try {
-                const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545/");
-                // const contractAddress = getContractAddress();
-                const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Replace with actual address
-
+                // Connect to Polygon Amoy network
+                const provider = new ethers.JsonRpcProvider("https://rpc-amoy.polygon.technology/");
+                
+                // Use the deployed contract address on Polygon Amoy
+                const contractAddress = "0xB75358cB48f472d3809c1eD36F34D4790e74042d"; // Your deployed contract address
 
                 console.log("Connecting to contract at:", contractAddress);
 
                 const commitmentStorage = CommitmentStorage__factory.connect(contractAddress, provider);
-                const onChainCommitments = await commitmentStorage.getCommitments(userId.toString());
+                
+                // Add specific gas settings for Polygon Amoy
+                const onChainCommitments = await commitmentStorage.getCommitments(userId.toString(), {
+                    gasPrice: ethers.parseUnits("50", "gwei"),
+                });
 
                 console.log("On-chain commitments:", onChainCommitments);
 
@@ -134,8 +119,8 @@ export default async function handler(
                 console.log("Calculated commitment:", calculatedCommitment);
 
                 const commitmentExists = onChainCommitments.some(
-                    (commitment: string) =>
-                        commitment.toString().toLowerCase() === calculatedCommitment.toLowerCase()
+                    (commitmentStruct: CommitmentStructOutput) => 
+                        commitmentStruct.commitment.toLowerCase() === calculatedCommitment.toLowerCase()
                 );
 
                 if (!commitmentExists) {
