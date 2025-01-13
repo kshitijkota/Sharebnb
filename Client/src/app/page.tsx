@@ -10,7 +10,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
-import { Shield, Scissors, Key } from "lucide-react";
+import { Shield, Scissors, Key, User } from "lucide-react";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { splitAndEncryptData, Fragment } from "@/lib/dataProcessor";
 import { processAndUploadData } from "@/lib/uploadProcessor";
@@ -19,6 +19,7 @@ export default function Home() {
   const [data, setData] = useState<string>("");
   const [fragmentSize, setFragmentSize] = useState<number>(16);
   const [encryptionKey, setEncryptionKey] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [fragments, setFragments] = useState<Fragment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -43,19 +44,20 @@ export default function Home() {
     document.body.removeChild(element);
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      if (!data || !encryptionKey || fragmentSize <= 0) {
-        throw new Error("Invalid input data, encryption key, or fragment size.");
+      if (!data || !encryptionKey || fragmentSize <= 0 || !userId) {
+        throw new Error("Please fill in all fields correctly.");
       }
 
-      // Define the userId (this can be dynamic if tied to authentication)
-      const userId = "user123";
+      // Validate userId as a number
+      if (isNaN(parseInt(userId))) {
+        throw new Error("User ID must be a valid number.");
+      }
 
       // Use the external function to process and upload data
       const { encryptedFragments, response } = await processAndUploadData({
@@ -75,12 +77,10 @@ export default function Home() {
     }
   };
 
-
-
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        <Card className="bg-gray-800">
+        <Card className="bg-gray-800 shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-bold flex items-center gap-2 text-gray-100">
               <Shield className="w-6 h-6 text-primary" />
@@ -89,56 +89,70 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-100">
-                  Data to Fragment
-                </label>
-                <Textarea
-                  value={data}
-                  onChange={(e) => setData(e.target.value)}
-                  placeholder="Enter the data to be fragmented and encrypted..."
-                  className="h-32 bg-gray-700 text-gray-100 placeholder-gray-400"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-100 flex items-center gap-2">
-                    <Scissors className="w-4 h-4" />
-                    Fragment Size
+                    <User className="w-4 h-4" /> User ID
                   </label>
                   <Input
-                    type="number"
-                    value={fragmentSize}
-                    onChange={(e) => setFragmentSize(Number(e.target.value))}
+                    type="text"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="Enter your User ID"
                     required
-                    min={1}
                     className="w-full bg-gray-700 text-gray-100 placeholder-gray-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-100 flex items-center gap-2">
-                    <Key className="w-4 h-4" />
-                    Encryption Key
+                  <label className="block text-sm font-medium text-gray-100">
+                    Data to Fragment
                   </label>
-                  <div className="flex gap-2">
+                  <Textarea
+                    value={data}
+                    onChange={(e) => setData(e.target.value)}
+                    placeholder="Enter the data to be fragmented and encrypted..."
+                    className="h-32 bg-gray-700 text-gray-100 placeholder-gray-400"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-100 flex items-center gap-2">
+                      <Scissors className="w-4 h-4" /> Fragment Size
+                    </label>
                     <Input
-                      type="text"
-                      value={encryptionKey}
-                      onChange={(e) => setEncryptionKey(e.target.value)}
-                      placeholder="Enter or generate an encryption key"
+                      type="number"
+                      value={fragmentSize}
+                      onChange={(e) => setFragmentSize(Number(e.target.value))}
                       required
-                      className="flex-1 bg-gray-700 text-gray-100 placeholder-gray-400"
+                      min={1}
+                      className="w-full bg-gray-700 text-gray-100 placeholder-gray-400"
                     />
-                    <Button
-                      type="button"
-                      onClick={generateKey}
-                      className="bg-primary text-gray-100"
-                    >
-                      Generate
-                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-100 flex items-center gap-2">
+                      <Key className="w-4 h-4" /> Encryption Key
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={encryptionKey}
+                        onChange={(e) => setEncryptionKey(e.target.value)}
+                        placeholder="Enter or generate an encryption key"
+                        required
+                        className="flex-1 bg-gray-700 text-gray-100 placeholder-gray-400"
+                      />
+                      <Button
+                        type="button"
+                        onClick={generateKey}
+                        className="bg-primary text-gray-100 hover:bg-primary-dark"
+                      >
+                        Generate
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
