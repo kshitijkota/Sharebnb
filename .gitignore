@@ -1,2 +1,38 @@
 Client/node_modules/
 Server/my-app/node_modules/
+
+# Node.js dependencies
+Client/node_modules/
+Server/node_modules/
+
+# Next.js build output
+Client/.next/
+Server/.next/
+
+# Dependency lock files
+Client/bun.lockb
+Server/bun.lockb
+Client/package-lock.json
+Server/package-lock.json
+Client/yarn.lock
+Server/yarn.lock
+
+# Logs
+Client/npm-debug.log*
+Server/npm-debug.log*
+Client/yarn-debug.log*
+Server/yarn-debug.log*
+Client/yarn-error.log*
+Server/yarn-error.log*
+
+# Ignore environment files
+Client/.env
+Server/.env
+Client/.env.local
+Server/.env.local
+Client/.env.development.local
+Server/.env.development.local
+Client/.env.test.local
+Server/.env.test.local
+Client/.env.production.local
+Server/.env.production.local
