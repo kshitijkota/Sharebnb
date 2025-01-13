@@ -37,7 +37,6 @@ ShareVault facilitates the sharing of encrypted data in a secure, decentralized 
 - **Smart Contracts for Payments**: Storage providers are compensated via Ethereum/Polygon-based smart contracts.
 
 ---
-<img width="292" alt="image" src="https://github.com/user-attachments/assets/5e6bcae3-6304-4253-940b-296de551aab2" />
 
 ## ⚙️ Setup
 
